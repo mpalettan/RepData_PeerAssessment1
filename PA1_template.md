@@ -80,7 +80,7 @@ legend("topright", lty = c(2, 3), col = c("blue", "red"),
        legend = c("Mean", "Median"))
 ```
 
-![](PA1_template_files/figure-markdown_github/unnamed-chunk-4-1.png)
+![](figure/Plot1.png)
 
 Mean and median of the total number of steps taken per day
 ----------------------------------------------------------
@@ -126,7 +126,7 @@ StepsByIntMax <- with(intAverages, intAverages[which(steps == max(steps)), "inte
 abline(v = StepsByIntMax, col = "blue", lwd = 1)
 ```
 
-![](PA1_template_files/figure-markdown_github/unnamed-chunk-6-1.png)
+![](figure/Plot2.png)
 
 Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
 -------------------------------------------------------------------------------------------------------------
@@ -258,7 +258,7 @@ legend("topright", lty = c(2, 3), col = c("blue", "red"),
        legend = c("Mean", "Median"))
 ```
 
-![](PA1_template_files/figure-markdown_github/unnamed-chunk-10-1.png)
+![](figure/Plot3.png)
 
 ``` r
 paste("Mean of the total number of steps taken each day: ", 
@@ -295,7 +295,7 @@ legend("topright", lty = c(2, 3), col = c("blue", "red"),
        legend = c("Mean", "Median"))
 ```
 
-![](PA1_template_files/figure-markdown_github/unnamed-chunk-11-1.png)
+![](figure/Plot4.png)
 
 ``` r
 paste("Mean of the total number of steps taken each day: ", 
@@ -429,7 +429,7 @@ ggplot(data = averages, aes(x = interval, y = steps)) +
     labs(x = "Interval", y = "Number of steps")
 ```
 
-![](PA1_template_files/figure-markdown_github/unnamed-chunk-13-1.png)
+![](figure/Plot5.png)
 
 ### OPTION 2:
 
@@ -443,6 +443,6 @@ ggplot(data = averages, aes(x = interval, y = steps)) +
     labs(x = "Interval", y = "Number of steps")
 ```
 
-![](PA1_template_files/figure-markdown_github/unnamed-chunk-14-1.png)
+![](figure/Plot6.png)
 
 **As it can be seen in Plot 5 and Plot 6, there are differences in activity patterns between weekdays and weekends. In weekends the behavior is more flat throughout the day, instead, on weekdays, more activity is observed at the end of the morning.**
