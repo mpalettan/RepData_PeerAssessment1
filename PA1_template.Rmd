@@ -1,25 +1,309 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Reproducible Research Course
+## Assignment 1
+### Made by Mauricio Paletta
 
 
-## Loading and preprocessing the data
+# 1. Loading and preprocessing the data
+
+Data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+
+- Dataset: Activity monitoring data [52K]
+
+The variables are:
+
+- **steps**: Number of steps taking in a 5-minute interval (missing values are coded as NA)
+
+- **date**: The date on which the measurement was taken in YYYY-MM-DD format
+
+- **interval**: Identifier for the 5-minute interval in which measurement was taken
 
 
+```{r}
+# Code for reading in the dataset and/or processing the data
+#
+activity <- read.csv("activity.csv")
+activity$date <- as.Date(strptime(activity$date, "%Y-%m-%d"))
+summary(activity)
+```
 
-## What is mean total number of steps taken per day?
+```{r}
+head(activity)
+```
+
+# 2. What is mean total number of steps taken per day?
+
+## Total number of steps taken per day
+
+```{r}
+StepsByDay <- with(activity, tapply(steps, date, sum))
+```
+
+## Histogram of the total number of steps taken each day
+
+```{r}
+hist(StepsByDay, 
+     col = "green", 
+     main = "Plot 1. Histogram of the total number of steps taken each day", 
+     xlab = "Total steps taken")
+rug(StepsByDay)
+
+StepsByDayMeanOri <- mean(StepsByDay, na.rm = TRUE)
+StepsByDayMedianOri <- median(StepsByDay, na.rm = TRUE)
+
+abline(v = StepsByDayMeanOri, col = "blue", lwd = 1, lty = 2)
+abline(v = StepsByDayMedianOri, col = "red", lwd = 1, lty = 3)
+
+legend("topright", lty = c(2, 3), col = c("blue", "red"), 
+       legend = c("Mean", "Median"))
+```
+
+## Mean and median of the total number of steps taken per day
+
+- **Mean**: `r paste(round(StepsByDayMeanOri, digits = 2))`
+
+- **Median**: `r paste(round(StepsByDayMedianOri, digits = 2))`
+
+# 3. What is the average daily activity pattern?
+
+## Average number of steps taken by the 5-minute interval 
+
+```{r}
+# There are 288 5-minute intervals per day
+#
+intAverages <- aggregate(steps ~ interval, data = activity, mean)
+
+# Change the intervals from 0 to 1435
+#
+aux <- c()
+for (i in intAverages$interval) { aux <- c(aux, i - (i %/% 100 * 40)) }
+intAverages$interval <- aux
+
+dim(intAverages)
+```
+
+## Series plot of the 5-minute interval and the average number of steps taken, averaged across all days
+
+```{r}
+with(intAverages, plot(interval, steps, 
+                      type = "l", lwd = 2, col = "green",
+                      xlab = "5-minute interval",
+                      ylab = "Average of steps",
+                      col.lab = "blue"))
+title("Plot 2. Average of steps taken across all days by 5-minute interval")
+
+StepsByIntMax <- with(intAverages, intAverages[which(steps == max(steps)), "interval"])
+abline(v = StepsByIntMax, col = "blue", lwd = 1)
+
+```
+
+## Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+**As it can be seen in Plot 2, the 5-minute interval which contains the maximum number of steps (on average across all the days) is `r StepsByIntMax` which corresponds to `r paste(StepsByIntMax %/% 60, ":", StepsByIntMax %% 60, sep = "")`**
+
+# 4. Imputing missing values
+
+## Calculate and report the total number of missing values in the dataset
+
+```{r}
+paste("Total number of missing values in the dataset: ", 
+      nrow(activity[!complete.cases(activity),]))
+```
+
+## Devise a strategy for filling in all of the missing values in the dataset 
+
+### OPTION 1: using Hmisc for imputing missing data
+
+```{r}
+if (!require("Hmisc")) install.packages("Hmisc")
+require("Hmisc")
+
+# New dataset equal to the original dataset 
+# A new column is added with the imputed steps column
+#
+activity.imputed1 <- activity
+activity.imputed1$steps.imputed <- with(activity.imputed1, impute(steps, mean))
+
+summary(activity.imputed1)
+```
+
+### OPTION 2: Assigning the average for the corresponding 5-minute interval
+
+```{r}
+if (!require("foreach")) install.packages("foreach")
+require("foreach")
+
+activity.imputed2 <- activity
+
+# For each steps == NA
+#
+invisible(foreach(idx = which(is.na(activity$steps))) %do% {
+    # Take the corresponding interval
+    #
+    int <- activity[idx, "interval"]
+    int <- int - (int %/% 100 * 40)
+
+    # Change the steps with the average of the corresponding interval
+    #
+    activity.imputed2[idx, "steps"] <- 
+        intAverages[which(intAverages$interval == int), "steps"]
+})
+
+summary(activity.imputed2)
+```
+
+## Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day
+
+### For OPTION 1
+
+```{r}
+StepsByDay <- with(activity.imputed1, tapply(steps.imputed, date, sum))
+hist(StepsByDay, 
+     col = "green", 
+     main = "Plot 3. Histogram of the total number of steps taken each day", 
+     xlab = "Total steps taken")
+mtext("Missing values imputed by using Hmisc", side = 3)
+rug(StepsByDay)
+
+StepsByDayMeanImp1 <- mean(StepsByDay)
+StepsByDayMedianImp1 <- median(StepsByDay)
+
+abline(v = StepsByDayMeanImp1, col = "blue", lwd = 1, lty = 2)
+abline(v = StepsByDayMedianImp1, col = "red", lwd = 1, lty = 3)
+
+legend("topright", lty = c(2, 3), col = c("blue", "red"), 
+       legend = c("Mean", "Median"))
+
+paste("Mean of the total number of steps taken each day: ", 
+      round(StepsByDayMeanImp1, digits = 2))
+paste("Median of the total number of steps taken each day: ", 
+      round(StepsByDayMedianImp1, digits = 2))
+```
+
+### For OPTION 2
+
+```{r}
+StepsByDay <- with(activity.imputed2, tapply(steps, date, sum))
+hist(StepsByDay, 
+     col = "green", 
+     main = "Plot 4. Histogram of the total number of steps taken each day", 
+     xlab = "Total steps taken")
+mtext("Missing values imputed with average of 5-minute interval", side = 3)
+rug(StepsByDay)
+
+StepsByDayMeanImp2 <- mean(StepsByDay)
+StepsByDayMedianImp2 <- median(StepsByDay)
+
+abline(v = StepsByDayMeanImp2, col = "blue", lwd = 1, lty = 2)
+abline(v = StepsByDayMedianImp2, col = "red", lwd = 1, lty = 3)
+
+legend("topright", lty = c(2, 3), col = c("blue", "red"), 
+       legend = c("Mean", "Median"))
+
+paste("Mean of the total number of steps taken each day: ", 
+      round(StepsByDayMeanImp2, digits = 2))
+paste("Median of the total number of steps taken each day: ", 
+      round(StepsByDayMedianImp2, digits = 2))
+```
+
+## Do these values differ from the estimates from the first part of the assignment? 
+
+### For OPTION 1
+
+Mean:  
+
+- Without imputing missing values: `r paste(round(StepsByDayMeanOri, digits = 2))`
+
+- Imputing missing values: `r paste(round(StepsByDayMeanImp1, digits = 2))`
+
+- Difference: `r paste(round(StepsByDayMeanOri - StepsByDayMeanImp1, digits = 2))`
+
+Median:
+
+- Without imputing missing values: `r paste(round(StepsByDayMedianOri, digits = 2))`
+
+- Imputing missing values: `r paste(round(StepsByDayMedianImp1, digits = 2))`
+
+- Difference: `r paste(round(StepsByDayMedianOri - StepsByDayMedianImp1, digits = 2))`
+
+### For OPTION 2
+
+Mean: 
+
+- Without imputing missing values: `r paste(round(StepsByDayMeanOri, digits = 2))`
+
+- Imputing missing values: `r paste(round(StepsByDayMeanImp2, digits = 2))`
+
+- Difference: `r paste(round(StepsByDayMeanOri - StepsByDayMeanImp2, digits = 2))`
+
+Median:
+
+- Without imputing missing values: `r paste(round(StepsByDayMedianOri, digits = 2))`
+
+- Imputing missing values: `r paste(round(StepsByDayMedianImp2, digits = 2))`
+
+- Difference: `r paste(round(StepsByDayMedianOri - StepsByDayMedianImp2, digits = 2))`
+
+## What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+**There is not much difference between the histograms using the original data and imputing missing values even with the two methods used.** 
+
+# 5. Are there differences in activity patterns between weekdays and weekends?
+
+## Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day
+
+```{r}
+if (!require("lubridate")) install.packages("lubridate")
+require("lubridate")
+
+# Addind the new variable in both of the imputed datasets 
+#
+activity.imputed1$daytype <- apply(activity.imputed1, 1, function(act) {
+    as.factor(ifelse(wday(act[2]) %in% 2:6, "weekday", "weekend"))    
+})
+
+head(activity.imputed1)
+
+activity.imputed2$daytype <- apply(activity.imputed2, 1, function(act) {
+    as.factor(ifelse(wday(act[2]) %in% 2:6, "weekday", "weekend"))    
+})
+
+head(activity.imputed2)
+```
+
+## Panel plot containing a time series of the 5-minute interval and the average number of steps taken, averaged across all weekday days or weekend days 
+
+### OPTION 1:
+
+```{r}
+# ggplot2 package is used for this plot
+#
+if (!require("ggplot2")) install.packages("ggplot2")
+require("ggplot2")
+
+averages <- aggregate(steps ~ interval + daytype, data = activity.imputed1, mean)
+ggplot(data = averages, aes(x = interval, y = steps)) + 
+    geom_line(color = "darkgreen", alpha = 1/2) + 
+    facet_grid(daytype ~ .) +
+    labs(title = "Plot 5. 5-minute interval vs. average number of steps taken",          subtitle = "Missing values imputed by using Hmisc") +
+    labs(x = "Interval", y = "Number of steps")
+```
+
+### OPTION 2:
+
+```{r}
+averages <- aggregate(steps ~ interval + daytype, data = activity.imputed2, mean)
+ggplot(data = averages, aes(x = interval, y = steps)) + 
+    geom_line(color = "darkgreen", alpha = 1/2) + 
+    facet_grid(daytype ~ .) +
+    labs(title = "Plot 6. 5-minute interval vs. average number of steps taken",
+         subtitle = "Missing values imputed with average of 5-minute interval") +
+    labs(x = "Interval", y = "Number of steps")
+```
+
+**As it can be seen in Plot 5 and Plot 6, there are differences in activity patterns between weekdays and weekends. In weekends the behavior is more flat throughout the day, instead, on weekdays, more activity is observed at the end of the morning.**
 
 
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
